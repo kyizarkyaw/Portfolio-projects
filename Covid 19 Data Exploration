@@ -1,0 +1,59 @@
+##Select Required Data
+Select location,date,total_cases,new_cases,total_deaths,population
+  From Covid19_Data.CovidDeaths
+  order by 1,2
+
+##Compare total cases Vs total deaths
+##Show which percentage of cases got death
+
+SELECT location,date,total_cases,new_cases,total_deaths,(total_deaths/total_cases)*100 AS deathpercentage
+  From Covid19_Data.CovidDeaths
+  WHERE location like '%Singapore%'
+  order by 1,2
+
+##Comaper total cases Vs population
+##Show which percentage of population got covid
+SELECT location,date,total_cases,population,(total_cases/population)*100 AS PercentPopulationInfected
+  From Covid19_Data.CovidDeaths
+  WHERE location like '%States%'
+  order by 1,2
+
+##Check countries with highest infection rates compared to population
+SELECT location,population,MAX(total_cases) as HighestInfectionCount,MAX(total_cases/population)*100 AS PercentPopulationInfected
+  From Covid19_Data.CovidDeaths
+  Group by location,population
+  order by PercentPopulationInfected desc
+
+##Check countries with highest death count compared to population
+SELECT location,MAX(CAST(total_deaths as int)) as TotalDeathCount
+  From Covid19_Data.CovidDeaths
+  where continent is not null
+  Group by location
+  order by TotalDeathCount desc
+
+##Check continents with highest death count compared to population
+SELECT continent,MAX(CAST(total_deaths as int)) as TotalDeathCount
+  From Covid19_Data.CovidDeaths
+  where continent is not null
+  Group by continent
+  order by TotalDeathCount desc
+
+##Global Numbers
+SELECT sum(new_cases) as totalcases,sum(cast(new_deaths as int)) as totaldeath,sum(cast(new_deaths as int))/sum(new_cases)*100 as deathpercentage
+  From Covid19_Data.CovidDeaths
+  where continent is not null
+  order by 1,2
+
+##Check total population Vs Vaccinations
+WITH PopvsVac 
+as
+(
+  SELECT dea.continent,dea.location,dea.date,dea.population,vac.new_vaccinations,(sum(vac.new_vaccinations) OVER(Partition by dea.location order by dea.location,dea.date)) as RollingPeopleVaccinated
+  FROM Covid19_Data.CovidDeaths dea
+  JOIN Covid19_Data.CovidVaccinations vac
+    ON dea.location=Vac.location
+    and dea.date=vac.date
+    where dea.continent is not null
+    )
+SELECT *, (RollingPeopleVaccinated/population)*100
+FROM PopvsVac
